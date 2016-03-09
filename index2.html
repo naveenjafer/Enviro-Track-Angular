@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html ng-app="demoapp">
+
+
+<head>
+    <script src="/scripts/angular.min.js"></script>
+    <script src="/scripts/angular-leaflet-directive.min.js"></script>
+    <script src="/scripts/jquery-1.7.1.min.js"></script>
+    <script src="/scripts/smart-table.js"></script>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+    <script src="/scripts/leaflet.js"></script>
+    <script src="/scripts/style-table.js"></script>
+    <link rel="stylesheet" href="/styles/w3.css" />
+    <link rel="stylesheet" href="/styles//css-table.css" />
+    <style>
+     .legend {
+         font: 14px/16px Arial, Helvetica, sans-serif;
+         background: rgba(255,255,255, 0.7);
+         box-shadow: 0 0 15px rgba(0,0,0,0.2);
+         border-radius: 5px;
+         padding: 6px 8px;
+         width: 180px;
+         line-height: 18px;
+         color: #555;
+     }
+     .legend i {
+         width: 16px;
+         height: 16px;
+         float: left;
+         margin-right: 8px;
+         opacity: 0.6;
+     }
+     #wrapper {
+     width: 100%;
+     margin: 0 auto;
+}
+#leftcolumn, #rightcolumn {
+    float: left;
+    height: 450px;
+
+}
+#leftcolumn {
+     width: 70%;
+
+}
+
+#rightcolumn {
+     width: 30%;
+       background-color: #F0FFFF;
+}
+li{
+  padding:0.0em 0 0.0em 3.0em;
+   margin-bottom:0.0em;
+   text-indent:0em;
+
+   list-style:none;
+   background-repeat:no-repeat;
+   }
+   li[data-type="time"]
+   {
+     background-image: url("images/1457469253_Watch.png");
+   }
+   li[data-type="distance"]
+   {
+     background-image: url("images/1457469499_road.png");
+   }
+   li[data-type="co2"]
+   {
+     background-image: url("images/1457469707_car.png");
+   }
+   li[data-type="fuel"]
+   {
+     background-image: url("images/1457469647_gas_station.png");
+   }
+   li[data-type="avspeed"]
+   {
+     background-image: url("images/1457469757_Dashboard.png");
+   }
+   li[data-type="mileage"]
+   {
+     background-image: url("images/1457485953_Esthetician_1.png");
+   }
+   li[data-type="starttime"]
+   {
+     background-image: url("images/1457487329_time.png");
+   }
+   li[data-type="date"]
+   {
+     background-image: url("images/1457487217_calendar.png");
+   }
+
+ </style>
+    <script>
+       var app = angular.module("demoapp", ["leaflet-directive"]);
+       app.controller('MarkersAddRemoveController', [ '$scope', function($scope) {
+         $scope.rowCollection = [
+  ];
+        var sample={
+           lat: 51.505,
+           lng: 0.1,
+         };
+         var pathsDict={
+                circle: {
+                    type: "circle",
+                    radius: 500 ,
+                    latlngs: {
+                       lat: 51.505,
+                       lng: 0.1,
+                     }
+                }
+              };
+
+
+          $scope.table={};
+
+           angular.extend($scope, {
+               middle: {},
+               paths: {},
+               markers: {},
+               legend: {
+                 position: 'bottomleft',
+                 colors: ["#0099ff","#ffff00","#009900","#ff9900","#cc3300"],
+                 labels: [ '0-40 Km/Hr', '40-80 Km/Hr', '80-120 Km/Hr', '120-160 Km/Hr','>160 Km/Hr' ]
+             },
+           });
+           $scope.addtotable = function(table_min,table_avg,table_max,keys,units)
+           {
+              for(var i=0;i<keys.length;i++)
+              {
+                var par=keys[i]+' '+units[i];
+                $scope.rowCollection[i]={parameter:par,minimum:table_min[i],average:table_avg[i],maximum:table_max[i]};
+              }
+           }
+           $scope.addTable = function(distance,co2,fuel,time,travel_date,starttime)
+           {
+             $scope.table.distance=distance;
+             $scope.table.co2=co2;
+             $scope.table.fuel=fuel;
+             $scope.table.time=time;
+             var mile=((fuel*100)/distance);
+             $scope.table.mileage=Number(mile).toFixed(2);
+             $scope.table.travel_date=travel_date;
+             $scope.table.starttime=starttime;
+           };
+           $scope.addMiddle = function(lati,long)
+           {
+             $scope.middle={
+               lat: lati,
+               lng: long,
+               zoom: 9
+             }
+             console.log("middle set");
+           }
+           $scope.addCircles = function(lati,long,i,col) {
+          //   $scope.paths = {};
+            //    $scope.paths["circle"] = pathsDict['circle'];
+            $scope.paths[i] =   {
+            type: "circle",
+            color: col,
+            radius: 10 ,
+            opacity: 0.9,
+            latlngs: {
+               lat: lati,
+               lng: long,
+             }
+           };
+            //    console.log(pathsDict['circle']);
+                console.log($scope.paths[i])
+                console.log("got added");
+              };
+           $scope.addMarkers = function(lati1,long1,lati2,long2) {
+               angular.extend($scope, {
+                   markers: {
+                       m1: {
+                           lat: lati1,
+                           lng: long1,
+                           focus: true,
+                           message: "Track Start",
+                       },
+                       m2: {
+                           lat: lati2,
+                           lng: long2,
+                           focus: false,
+                           message: "Track End",
+                       }
+                   }
+               });
+           };
+
+           $scope.removeMarkers = function() {
+               $scope.markers = {};
+           };
+
+        //   $scope.addMarkers();
+       } ]);
+   </script>
+ </head>
+ <body ng-controller="MarkersAddRemoveController">
+  <!-- <div class="container leftband" id="route-information-container">
+  <div class="row-fluid" >
+    <div class="span10">
+      <div id="routeInformation" style="margin-left: 70px;">
+      </div>
+      <ul class="inline-stats" id="statistics">
+        <li><p id="dist"></p><p id="time"></p><span class="muted">DISTANCE</span></li>
+        <li><p id="avg-consum"></p><p id="total-consum"></p><span class="muted">CONSUMPTION</span></li>
+        <li><p id="avg-co2"></p><p id="total-co2"></p><span class="muted">CO2</span></li>
+        <li><p><br></p><p id="idle-time"></p><span class="muted">IDLE TIME</span></li>
+        <li><p><br></p><p id="avg-speed"></p><span class="muted">AVERAGE SPEED</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+-->
+<div id="wrapper">
+  <div id="leftcolumn">
+
+     <leaflet id="maps" lf-center="middle" markers="markers" legend="legend" paths="paths" height="100%" width="100%"></leaflet>
+   </div>
+   <div id="rightcolumn" style="height:450px;display:none">
+
+     <ul class="inline-stats" id="statistics" style="display:none">
+       <li data-type="date"><p>Travel Date - {{table.travel_date}}</p></li>
+       <li data-type="starttime"><p>Start Time - {{table.starttime}}</p></li>
+       <li data-type="distance"><p>Distance(Km) - {{table.distance}}</p></li>
+       <li data-type="time"><p>Duration(Minutes) - {{table.time}}</p></li>
+       <li data-type="co2"><p>CO2 Released(Kg) - {{table.co2}}</p></li>
+       <li data-type="fuel"><p>Fuel Consumed(L) - {{table.fuel}}</p></li>
+       <li data-type="mileage"><p>Mileage(L/100Km) - {{table.mileage}}</p></li>
+     </ul>
+   </div>
+ </div>
+
+
+<table id="travel" st-table="rowCollection" style="width:70%;display:none" class="table table-striped">
+	<thead>
+	<tr>
+		<th>Parameter</th>
+		<th>Minimum</th>
+		<th>Average</th>
+		<th>Maximum</th>
+	</tr>
+	</thead>
+	<tbody>
+	<tr ng-repeat="row in rowCollection">
+		<td>{{row.parameter}}</td>
+		<td>{{row.minimum}}</td>
+		<td>{{row.average}}</td>
+		<td>{{row.maximum}}</td>
+	</tr>
+	</tbody>
+</table>
+
+
+     <script>
+     $(document).ready(function(){
+
+       var len_data;
+       var long_init;
+       var lat_init;
+       var diff;
+       var keys;
+       var datatable;
+       var table_avg;
+       var table_max;
+       var table_min;
+       var units;
+       var url;
+       var start_time;
+       var start_date;
+
+       $.get("https://envirocar.org/api/stable/tracks/56d9dc80e4b0b5e23789124a", function(data, status){
+         len_data=data.features.length;
+         long_init=data.features[0].geometry.coordinates[0];
+         lat_init=data.features[0].geometry.coordinates[1];
+
+          var d1=data.features[0].properties.time;
+          var date1=new Date(d1);
+          console.log(date1);
+          var d2=data.features[len_data-1].properties.time;
+          var date2=new Date(d2);
+          console.log(date2);
+          diff=Math.abs(date2-date1);
+          var start_date=date1.toDateString();
+          var hrs=date1.getUTCHours();
+          var mins=date1.getUTCMinutes();
+          var start_time=hrs+":"+mins;
+          console.log("mark here");
+          console.log(d1);
+          console.log(d2);
+          console.log(diff);
+          diff=diff/60000;
+          diff=Number(diff).toFixed(2);
+          // MINUTES OF TRAVEL IS CALCULATED HERE.
+
+          console.log(diff+"minutes");
+          var scope1 = angular.element(document.getElementById("maps")).scope();
+          scope1.$apply(function ()
+          {
+                console.log("added markers");
+                //  scope.addMarkers()
+
+                    scope1.addMiddle(lat_init,long_init);
+                    console.log("WORKED")
+                console.log("added circles");
+          });
+          var color=["#0099ff","#ffff00","#009900","#ff9900","#cc3300"];
+          keys=Object.keys(data.features[0].properties.phenomenons);
+          console.log(keys[0]);
+          console.log(keys.length);
+          datatable=new Array(keys.length);
+          {
+            for(var i=0;i<keys.length;i++)
+            {
+              datatable[i]=new Array(len_data-1);
+            }
+          }
+          units=new Array(keys.length);
+          {
+            for(var i=0;i<keys.length;i++)
+            {
+              units[i]=new Array(len_data-1);
+            }
+          }
+          var Co2sum=0;
+          var fuelSum=0;
+          for(var i=0;i<len_data;i++)
+          {
+            worker(i);
+          }
+          function worker(i)
+          {
+            if(i<=(len_data-2))
+            {
+              function CO2Calc()
+              {
+                  var time1=data.features[i].properties.time;
+                  var time2=data.features[i+1].properties.time;
+                  var seconds_passed=new Date(time2).getTime() - new Date (time1).getTime();
+                  //seconds is in milliseconds so convert to seconds
+                  var seconds=seconds_passed/1000;
+                  if(seconds<=10)
+                  {
+                    var maf=data.features[i].properties.phenomenons["Calculated MAF"].value;
+                    var co2=(((maf / 14.7) / 730 )) * 2.35;
+                    Co2sum += seconds * co2;
+                  }
+              }
+              CO2Calc();
+              function ConsumptionCalc()
+              {
+                  var time1=data.features[i].properties.time;
+                  var time2=data.features[i+1].properties.time;
+                  var seconds_passed=new Date(time2).getTime() - new Date (time1).getTime();
+                  //seconds is in milliseconds so convert to seconds
+                  var seconds=seconds_passed/1000;
+                  if(seconds<=10)
+                  {
+                      var maf=data.features[i].properties.phenomenons["Calculated MAF"].value;
+                      var consumption = maf / 10731;
+                      fuelSum += seconds * consumption;
+                  }
+              }
+                ConsumptionCalc();
+            }
+
+            if(i==0)
+            {
+              for(var j=0;j<keys.length;j++)
+              {
+                units[j]=data.features[i].properties.phenomenons[keys[j]].unit;
+              }
+            return;
+            }
+            var long=data.features[i].geometry.coordinates[0];
+            var lati=data.features[i].geometry.coordinates[1];
+            var temp='Intake Pressure';
+            var ref_obj=data.features[i].properties.phenomenons;
+            for(var j=0;j<keys.length;j++)
+            {
+                if(ref_obj[keys[j]])
+                  datatable[j][i]=ref_obj[keys[j]].value;
+            }
+            var scope = angular.element(document.getElementById("maps")).scope();
+            if(i==(len_data-1))
+            {
+              var long1=data.features[0].geometry.coordinates[0];
+              var lati1=data.features[0].geometry.coordinates[1];
+              var long2=data.features[i].geometry.coordinates[0];
+              var lati2=data.features[i].geometry.coordinates[1];
+              scope.$apply(function (){
+                console.log("adding starting and ending points");
+                scope.addMarkers(lati1,long1,lati2,long2);
+              });
+            return;
+            }
+            var spe=data.features[i].properties.phenomenons.Speed.value;
+            spe=spe/40;
+            spe=Number(spe).toFixed(0);
+            var col=color[spe];
+            scope.$apply(function ()
+            {
+                  console.log("added markers");
+                  console.log(col+"is the colour");
+                  scope.addCircles(lati,long,i,col);
+                  console.log("added circles");
+            });
+
+          }
+          table_avg=new Array(keys.length);
+          {
+            for(var i=0;i<keys.length;i++)
+            {
+              table_avg[i]=new Array(3);
+              // will contain maximum minimum and mean.
+            }
+          }
+          table_min=new Array(keys.length);
+          {
+            for(var i=0;i<keys.length;i++)
+            {
+              table_min[i]=new Array(3);
+              // will contain maximum minimum and mean.
+            }
+          }
+          table_max=new Array(keys.length);
+          {
+            for(var i=0;i<keys.length;i++)
+            {
+              table_max[i]=new Array(3);
+              // will contain maximum minimum and mean.
+            }
+          }
+          //  table_max=table_avg
+          for(var j=0;j<keys.length;j++)
+          {
+            var sum=0;
+            var min=0;
+            var max=0;
+            min=Number.MAX_SAFE_INTEGER;
+            max=Number.MIN_SAFE_INTEGER;
+            for(var k=0;k<len_data;k++)
+            {
+              if(datatable[j][k])
+              {
+                sum=sum+datatable[j][k];
+            //    console.log(datatable[j][k]);
+              }
+              if(datatable[j][k]<min)
+              {
+                min=datatable[j][k];
+              }
+              if(datatable[j][k]>max)
+              {
+                max=datatable[j][k];
+              }
+            }
+            //console.log(min);
+            table_min[j]=Number(min).toFixed(3);
+            table_max[j]=Number(max).toFixed(3);
+            //console.log(sum+"IS SUM");
+            sum=sum/len_data;
+            table_avg[j]=Number(sum).toFixed(3);
+          }
+          // the avergaes of all params have been calculated.
+          //send these to the module.
+          var scope_table=angular.element(document.getElementById("maps")).scope();
+          scope_table.$apply(function (){
+            scope_table.addtotable(table_min,table_avg,table_max,keys,units);
+          });
+          var lengthoftrip=data.properties["length"];
+          Co2sum=Number(Co2sum).toFixed(2);
+          fuelSum=Number(fuelSum).toFixed(2);
+          lengthoftrip=Number(lengthoftrip).toFixed(2);
+
+
+          var scope = angular.element(document.getElementById("maps")).scope();
+          console.log(units);
+          scope.$apply(function (){
+            console.log("adding starting and ending points");
+            scope.addTable(lengthoftrip,Co2sum,fuelSum,diff,start_date,start_time);
+          });
+          console.log(lengthoftrip+"is length of trip");
+          console.log(Co2sum+"is total Co2 given out");
+          console.log(fuelSum+"is total Fuel Consumed");
+          //   console.log(keys);
+            // console.log(datatable);
+            $('#maps').show();
+            $('#statistics').show();
+            $('#rightcolumn').show();
+            $('#travel').show();
+       });
+
+     console.log("came here");
+
+    // addMarkers();
+     console.log("success");
+
+   //console.log(keys);
+   });
+
+
+     </script>
+
+ </body>
+</html>
